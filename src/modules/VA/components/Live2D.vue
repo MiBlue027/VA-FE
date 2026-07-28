@@ -12,7 +12,7 @@ const props = withDefaults(
             modelUrl?: string;
         }>(),
         {
-            modelUrl: "/assets/Live2DAsset/sdk4/Resources/Haru/Haru.model3.json",
+            modelUrl: "/assets/Live2DAsset/Resources/Haru/Haru.model3.json",
         }
 );
 
@@ -36,7 +36,7 @@ async function initLive2D() {
         antialias: true,
     });
     model = await Live2DModel.from(props.modelUrl, {
-        autoInteract: false,
+        autoInteract: false
     });
     console.log(model.internalModel);
     console.log(model);
