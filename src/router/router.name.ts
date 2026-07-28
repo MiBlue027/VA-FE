@@ -1,0 +1,7 @@
+export const RouterName = {
+    TEST_WS: "TEST_WS"
+    , TEST_CHUNK: "TEST_CHUNK"
+    , LIVE_2D: "LIVE_2D"
+    , LIVE_2D_MOD: "LIVE_2D_MOD"
+    , VIRTUAL_ASSISTANT: "VIRTUAL_ASSISTANT"
+}
