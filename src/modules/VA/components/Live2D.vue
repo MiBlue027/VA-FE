@@ -25,6 +25,9 @@ let dataArray: Uint8Array | null = null;
 let audio: HTMLAudioElement | null = null;
 let lipSyncRegistered = false;
 
+// simpan object URL aktif supaya bisa di-revoke
+let currentObjectUrl: string | null = null;
+
 async function initLive2D() {
     if (!canvasRef.value || !containerRef.value) return;
     app = new PIXI.Application({
@@ -71,6 +74,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
     window.removeEventListener("resize", fitModel);
+    revokeCurrentObjectUrl();
     if (model) {
         model.destroy({
             children: true,
@@ -83,7 +87,18 @@ onBeforeUnmount(() => {
     }
 });
 
-async function playVoice(url: string) {
+function revokeCurrentObjectUrl() {
+    if (currentObjectUrl) {
+        URL.revokeObjectURL(currentObjectUrl);
+        currentObjectUrl = null;
+    }
+}
+
+/**
+ * playVoice sekarang menerima Blob (hasil TTS langsung),
+ * tapi tetap backward-compatible kalau ada yang kirim string URL.
+ */
+async function playVoice(source: Blob | string) {
 
     if (!audioContext) {
         audioContext = new AudioContext();
@@ -97,15 +112,26 @@ async function playVoice(url: string) {
         audio.pause();
     }
 
+    // bersihkan object URL lama sebelum bikin yang baru
+    revokeCurrentObjectUrl();
+
+    let url: string;
+    if (source instanceof Blob) {
+        url = URL.createObjectURL(source);
+        currentObjectUrl = url;
+    } else {
+        url = source;
+    }
+
     audio = new Audio(url);
 
-    const source = audioContext.createMediaElementSource(audio);
+    const source_ = audioContext.createMediaElementSource(audio);
 
     analyser = audioContext.createAnalyser();
     analyser.fftSize = 512;
     analyser.smoothingTimeConstant = 0.3;
 
-    source.connect(analyser);
+    source_.connect(analyser);
     analyser.connect(audioContext.destination);
 
     dataArray = new Uint8Array(analyser.frequencyBinCount);
@@ -117,8 +143,8 @@ async function playVoice(url: string) {
     const DECAY = 0.15;
 
     // --- pengaturan senyum ---
-    const SMILE_BASE = 0.7;   // level senyum dasar (0 = netral, 1 = senyum maksimal)
-    const SMILE_VARIATION = 0.2; // seberapa besar audio boleh menambah/mengurangi senyum
+    const SMILE_BASE = 0.7;
+    const SMILE_VARIATION = 0.2;
 
     if (!lipSyncRegistered && model) {
 
@@ -130,7 +156,7 @@ async function playVoice(url: string) {
 
             if (!audio || audio.paused) {
                 currentMouthOpen += (0 - currentMouthOpen) * DECAY;
-                currentMouthForm += (SMILE_BASE - currentMouthForm) * DECAY; // tetap senyum saat diam
+                currentMouthForm += (SMILE_BASE - currentMouthForm) * DECAY;
 
                 model.internalModel.coreModel.setParameterValueById("ParamMouthOpenY", currentMouthOpen);
                 model.internalModel.coreModel.setParameterValueById("ParamMouthForm", currentMouthForm);
@@ -168,15 +194,12 @@ async function playVoice(url: string) {
             const highAvg = highCount ? highSum / highCount : 0;
             const total = lowAvg + highAvg;
 
-            // rasio frekuensi dipakai sebagai OFFSET dari baseline senyum,
-            // bukan sebagai nilai bebas -1..1, jadi tidak pernah jatuh ke cemberut
             let freqOffset = 0;
             if (total > 0.01) {
-                freqOffset = (highAvg - lowAvg) / total; // -1..1
+                freqOffset = (highAvg - lowAvg) / total;
             }
 
             let targetMouthForm = SMILE_BASE + freqOffset * SMILE_VARIATION;
-            // clamp supaya tidak pernah di bawah baseline minimum senyum
             targetMouthForm = Math.min(Math.max(targetMouthForm, SMILE_BASE - SMILE_VARIATION), 1);
 
             const openRate = targetMouthOpen > currentMouthOpen ? ATTACK : DECAY;
@@ -195,7 +218,8 @@ async function playVoice(url: string) {
 
     audio.onended = () => {
         model.internalModel.coreModel.setParameterValueById("ParamMouthOpenY", 0);
-        model.internalModel.coreModel.setParameterValueById("ParamMouthForm", SMILE_BASE); // tetap senyum setelah selesai bicara
+        model.internalModel.coreModel.setParameterValueById("ParamMouthForm", SMILE_BASE);
+        revokeCurrentObjectUrl();
     };
 }
 
