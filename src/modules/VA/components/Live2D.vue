@@ -21,7 +21,7 @@ let model: any = null;
 
 let audioContext: AudioContext | null = null;
 let analyser: AnalyserNode | null = null;
-let dataArray: Uint8Array | null = null;
+let dataArray: Uint8Array<ArrayBuffer>| null = null;
 let audio: HTMLAudioElement | null = null;
 let lipSyncRegistered = false;
 
@@ -134,7 +134,9 @@ async function playVoice(source: Blob | string) {
     source_.connect(analyser);
     analyser.connect(audioContext.destination);
 
-    dataArray = new Uint8Array(analyser.frequencyBinCount);
+    dataArray = new Uint8Array(
+            new ArrayBuffer(analyser.frequencyBinCount)
+    );
 
     let currentMouthOpen = 0;
     let currentMouthForm = 0;
