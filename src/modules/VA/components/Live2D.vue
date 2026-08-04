@@ -98,7 +98,7 @@ function revokeCurrentObjectUrl() {
  * playVoice sekarang menerima Blob (hasil TTS langsung),
  * tapi tetap backward-compatible kalau ada yang kirim string URL.
  */
-async function playVoice(source: Blob | string) {
+async function playVoice(source: Blob | string): Promise<void> {
 
     if (!audioContext) {
         audioContext = new AudioContext();
@@ -223,6 +223,28 @@ async function playVoice(source: Blob | string) {
         model.internalModel.coreModel.setParameterValueById("ParamMouthForm", SMILE_BASE);
         revokeCurrentObjectUrl();
     };
+
+    return new Promise<void>((resolve, reject) => {
+        if (!audio) {
+            reject(new Error("Audio element not initialized"));
+            return;
+        }
+
+        audio.onended = () => {
+            model.internalModel.coreModel.setParameterValueById("ParamMouthOpenY", 0);
+            model.internalModel.coreModel.setParameterValueById("ParamMouthForm", SMILE_BASE);
+            revokeCurrentObjectUrl();
+            resolve();
+        };
+
+        audio.onerror = (e) => {
+            revokeCurrentObjectUrl();
+            reject(e);
+        };
+
+        audio.play().catch(reject);
+    });
+
 }
 
 
