@@ -1,3 +1,4 @@
 export const RouterName = {
     VIRTUAL_ASSISTANT: "VIRTUAL_ASSISTANT"
+    , DOCUMENT_UPLOAD: "DOCUMENT_UPLOAD"
 }

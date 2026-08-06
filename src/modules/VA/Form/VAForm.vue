@@ -239,10 +239,7 @@ async function SubmitQuestionChunker() {
 
         console.log("Answer from webhook:", answer);
 
-        const chunks = Chunker.chunk(
-                answer,
-                10
-        );
+        const chunks = Chunker.chunk(answer);
 
         const audioQueue: Blob[] = [];
         let producerFinished = false;
