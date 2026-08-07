@@ -12,7 +12,7 @@ export interface F5TTSService_Config {
     live2dRef: Ref<any>
 }
 
-class F5TTSService {
+export class F5TTSService {
     private config: F5TTSService_Config
     private TTSReference = {
         refAudio: "I:/Project/Virtual-Assistant-Project/VA-FE/public/assets/audio/VO_Sangonomiya_Kokomi_Chat_-_Fish.wav"
