@@ -8,6 +8,8 @@
 import { ICubismModelSetting } from './icubismmodelsetting';
 import { CubismIdHandle } from './id/cubismid';
 import { CubismFramework } from './live2dcubismframework';
+import { csmMap, iterator } from './type/csmmap';
+import { csmVector } from './type/csmvector';
 import { CubismJson, Value } from './utils/cubismjson';
 
 export enum FrequestNode {
@@ -38,35 +40,51 @@ export class CubismModelSettingJson extends ICubismModelSetting {
     this._json = CubismJson.create(buffer, size);
 
     if (this.getJson()) {
-      this._jsonValue = [
-        // 順番はenum FrequestNodeと一致させる
-        this.getJson().getRoot().getValueByString(this.groups),
+      this._jsonValue = new csmVector<Value>();
+
+      // 順番はenum FrequestNodeと一致させる
+      this._jsonValue.pushBack(
+        this.getJson().getRoot().getValueByString(this.groups)
+      );
+      this._jsonValue.pushBack(
         this.getJson()
           .getRoot()
           .getValueByString(this.fileReferences)
-          .getValueByString(this.moc),
+          .getValueByString(this.moc)
+      );
+      this._jsonValue.pushBack(
         this.getJson()
           .getRoot()
           .getValueByString(this.fileReferences)
-          .getValueByString(this.motions),
+          .getValueByString(this.motions)
+      );
+      this._jsonValue.pushBack(
         this.getJson()
           .getRoot()
           .getValueByString(this.fileReferences)
-          .getValueByString(this.expressions),
+          .getValueByString(this.expressions)
+      );
+      this._jsonValue.pushBack(
         this.getJson()
           .getRoot()
           .getValueByString(this.fileReferences)
-          .getValueByString(this.textures),
+          .getValueByString(this.textures)
+      );
+      this._jsonValue.pushBack(
         this.getJson()
           .getRoot()
           .getValueByString(this.fileReferences)
-          .getValueByString(this.physics),
+          .getValueByString(this.physics)
+      );
+      this._jsonValue.pushBack(
         this.getJson()
           .getRoot()
           .getValueByString(this.fileReferences)
-          .getValueByString(this.pose),
+          .getValueByString(this.pose)
+      );
+      this._jsonValue.pushBack(
         this.getJson().getRoot().getValueByString(this.hitAreas)
-      ];
+      );
     }
   }
 
@@ -96,7 +114,7 @@ export class CubismModelSettingJson extends ICubismModelSetting {
     if (!this.isExistModelFile()) {
       return '';
     }
-    return this._jsonValue[FrequestNode.FrequestNode_Moc].getRawString();
+    return this._jsonValue.at(FrequestNode.FrequestNode_Moc).getRawString();
   }
 
   /**
@@ -108,7 +126,7 @@ export class CubismModelSettingJson extends ICubismModelSetting {
       return 0;
     }
 
-    return this._jsonValue[FrequestNode.FrequestNode_Textures].getSize();
+    return this._jsonValue.at(FrequestNode.FrequestNode_Textures).getSize();
   }
 
   /**
@@ -116,7 +134,8 @@ export class CubismModelSettingJson extends ICubismModelSetting {
    * @return テクスチャが配置されたディレクトリの名前
    */
   public getTextureDirectory(): string {
-    const texturePath = this._jsonValue[FrequestNode.FrequestNode_Textures]
+    const texturePath = this._jsonValue
+      .at(FrequestNode.FrequestNode_Textures)
       .getValueByIndex(0)
       .getRawString();
 
@@ -142,7 +161,8 @@ export class CubismModelSettingJson extends ICubismModelSetting {
    * @return テクスチャの名前
    */
   public getTextureFileName(index: number): string {
-    return this._jsonValue[FrequestNode.FrequestNode_Textures]
+    return this._jsonValue
+      .at(FrequestNode.FrequestNode_Textures)
       .getValueByIndex(index)
       .getRawString();
   }
@@ -156,7 +176,7 @@ export class CubismModelSettingJson extends ICubismModelSetting {
       return 0;
     }
 
-    return this._jsonValue[FrequestNode.FrequestNode_HitAreas].getSize();
+    return this._jsonValue.at(FrequestNode.FrequestNode_HitAreas).getSize();
   }
 
   /**
@@ -167,7 +187,8 @@ export class CubismModelSettingJson extends ICubismModelSetting {
    */
   public getHitAreaId(index: number): CubismIdHandle {
     return CubismFramework.getIdManager().getId(
-      this._jsonValue[FrequestNode.FrequestNode_HitAreas]
+      this._jsonValue
+        .at(FrequestNode.FrequestNode_HitAreas)
         .getValueByIndex(index)
         .getValueByString(this.id)
         .getRawString()
@@ -180,7 +201,8 @@ export class CubismModelSettingJson extends ICubismModelSetting {
    * @return 当たり判定に設定された名前
    */
   public getHitAreaName(index: number): string {
-    return this._jsonValue[FrequestNode.FrequestNode_HitAreas]
+    return this._jsonValue
+      .at(FrequestNode.FrequestNode_HitAreas)
       .getValueByIndex(index)
       .getValueByString(this.name)
       .getRawString();
@@ -195,7 +217,7 @@ export class CubismModelSettingJson extends ICubismModelSetting {
       return '';
     }
 
-    return this._jsonValue[FrequestNode.FrequestNode_Physics].getRawString();
+    return this._jsonValue.at(FrequestNode.FrequestNode_Physics).getRawString();
   }
 
   /**
@@ -207,7 +229,7 @@ export class CubismModelSettingJson extends ICubismModelSetting {
       return '';
     }
 
-    return this._jsonValue[FrequestNode.FrequestNode_Pose].getRawString();
+    return this._jsonValue.at(FrequestNode.FrequestNode_Pose).getRawString();
   }
 
   /**
@@ -219,7 +241,7 @@ export class CubismModelSettingJson extends ICubismModelSetting {
       return 0;
     }
 
-    return this._jsonValue[FrequestNode.FrequestNode_Expressions].getSize();
+    return this._jsonValue.at(FrequestNode.FrequestNode_Expressions).getSize();
   }
 
   /**
@@ -228,7 +250,8 @@ export class CubismModelSettingJson extends ICubismModelSetting {
    * @return 表情の名前
    */
   public getExpressionName(index: number): string {
-    return this._jsonValue[FrequestNode.FrequestNode_Expressions]
+    return this._jsonValue
+      .at(FrequestNode.FrequestNode_Expressions)
       .getValueByIndex(index)
       .getValueByString(this.name)
       .getRawString();
@@ -240,7 +263,8 @@ export class CubismModelSettingJson extends ICubismModelSetting {
    * @return 表情設定ファイルの名前
    */
   public getExpressionFileName(index: number): string {
-    return this._jsonValue[FrequestNode.FrequestNode_Expressions]
+    return this._jsonValue
+      .at(FrequestNode.FrequestNode_Expressions)
       .getValueByIndex(index)
       .getValueByString(this.filePath)
       .getRawString();
@@ -255,7 +279,10 @@ export class CubismModelSettingJson extends ICubismModelSetting {
       return 0;
     }
 
-    return this._jsonValue[FrequestNode.FrequestNode_Motions].getKeys().length;
+    return this._jsonValue
+      .at(FrequestNode.FrequestNode_Motions)
+      .getKeys()
+      .getSize();
   }
 
   /**
@@ -268,7 +295,10 @@ export class CubismModelSettingJson extends ICubismModelSetting {
       return null;
     }
 
-    return this._jsonValue[FrequestNode.FrequestNode_Motions].getKeys()[index];
+    return this._jsonValue
+      .at(FrequestNode.FrequestNode_Motions)
+      .getKeys()
+      .at(index);
   }
 
   /**
@@ -281,7 +311,8 @@ export class CubismModelSettingJson extends ICubismModelSetting {
       return 0;
     }
 
-    return this._jsonValue[FrequestNode.FrequestNode_Motions]
+    return this._jsonValue
+      .at(FrequestNode.FrequestNode_Motions)
       .getValueByString(groupName)
       .getSize();
   }
@@ -297,7 +328,8 @@ export class CubismModelSettingJson extends ICubismModelSetting {
       return '';
     }
 
-    return this._jsonValue[FrequestNode.FrequestNode_Motions]
+    return this._jsonValue
+      .at(FrequestNode.FrequestNode_Motions)
       .getValueByString(groupName)
       .getValueByIndex(index)
       .getValueByString(this.filePath)
@@ -315,7 +347,8 @@ export class CubismModelSettingJson extends ICubismModelSetting {
       return '';
     }
 
-    return this._jsonValue[FrequestNode.FrequestNode_Motions]
+    return this._jsonValue
+      .at(FrequestNode.FrequestNode_Motions)
       .getValueByString(groupName)
       .getValueByIndex(index)
       .getValueByString(this.soundPath)
@@ -333,7 +366,8 @@ export class CubismModelSettingJson extends ICubismModelSetting {
       return -1.0;
     }
 
-    return this._jsonValue[FrequestNode.FrequestNode_Motions]
+    return this._jsonValue
+      .at(FrequestNode.FrequestNode_Motions)
       .getValueByString(groupName)
       .getValueByIndex(index)
       .getValueByString(this.fadeInTime)
@@ -351,7 +385,8 @@ export class CubismModelSettingJson extends ICubismModelSetting {
       return -1.0;
     }
 
-    return this._jsonValue[FrequestNode.FrequestNode_Motions]
+    return this._jsonValue
+      .at(FrequestNode.FrequestNode_Motions)
       .getValueByString(groupName)
       .getValueByIndex(index)
       .getValueByString(this.fadeOutTime)
@@ -376,13 +411,13 @@ export class CubismModelSettingJson extends ICubismModelSetting {
 
   /**
    * レイアウト情報を取得する
-   * @param outLayoutMap Mapクラスのインスタンス
+   * @param outLayoutMap csmMapクラスのインスタンス
    * @return true レイアウト情報が存在する
    * @return false レイアウト情報が存在しない
    */
-  public getLayoutMap(outLayoutMap: Map<string, number>): boolean {
+  public getLayoutMap(outLayoutMap: csmMap<string, number>): boolean {
     // 存在しない要素にアクセスするとエラーになるためValueがnullの場合はnullを代入する
-    const map: Map<string, Value> = this.getJson()
+    const map: csmMap<string, Value> = this.getJson()
       .getRoot()
       .getValueByString(this.layout)
       .getMap();
@@ -393,8 +428,12 @@ export class CubismModelSettingJson extends ICubismModelSetting {
 
     let ret = false;
 
-    for (const element of map) {
-      outLayoutMap.set(element[0], element[1].toFloat());
+    for (
+      const ite: iterator<string, Value> = map.begin();
+      ite.notEqual(map.end());
+      ite.preIncrement()
+    ) {
+      outLayoutMap.setValue(ite.ptr().first, ite.ptr().second.toFloat());
       ret = true;
     }
 
@@ -413,17 +452,18 @@ export class CubismModelSettingJson extends ICubismModelSetting {
     let num = 0;
     for (
       let i = 0;
-      i < this._jsonValue[FrequestNode.FrequestNode_Groups].getSize();
+      i < this._jsonValue.at(FrequestNode.FrequestNode_Groups).getSize();
       i++
     ) {
-      const refI: Value =
-        this._jsonValue[FrequestNode.FrequestNode_Groups].getValueByIndex(i);
+      const refI: Value = this._jsonValue
+        .at(FrequestNode.FrequestNode_Groups)
+        .getValueByIndex(i);
       if (refI.isNull() || refI.isError()) {
         continue;
       }
 
       if (refI.getValueByString(this.name).getRawString() == this.eyeBlink) {
-        num = refI.getValueByString(this.ids).getVector().length;
+        num = refI.getValueByString(this.ids).getVector().getSize();
         break;
       }
     }
@@ -443,11 +483,12 @@ export class CubismModelSettingJson extends ICubismModelSetting {
 
     for (
       let i = 0;
-      i < this._jsonValue[FrequestNode.FrequestNode_Groups].getSize();
+      i < this._jsonValue.at(FrequestNode.FrequestNode_Groups).getSize();
       i++
     ) {
-      const refI: Value =
-        this._jsonValue[FrequestNode.FrequestNode_Groups].getValueByIndex(i);
+      const refI: Value = this._jsonValue
+        .at(FrequestNode.FrequestNode_Groups)
+        .getValueByIndex(i);
       if (refI.isNull() || refI.isError()) {
         continue;
       }
@@ -473,17 +514,18 @@ export class CubismModelSettingJson extends ICubismModelSetting {
     let num = 0;
     for (
       let i = 0;
-      i < this._jsonValue[FrequestNode.FrequestNode_Groups].getSize();
+      i < this._jsonValue.at(FrequestNode.FrequestNode_Groups).getSize();
       i++
     ) {
-      const refI: Value =
-        this._jsonValue[FrequestNode.FrequestNode_Groups].getValueByIndex(i);
+      const refI: Value = this._jsonValue
+        .at(FrequestNode.FrequestNode_Groups)
+        .getValueByIndex(i);
       if (refI.isNull() || refI.isError()) {
         continue;
       }
 
       if (refI.getValueByString(this.name).getRawString() == this.lipSync) {
-        num = refI.getValueByString(this.ids).getVector().length;
+        num = refI.getValueByString(this.ids).getVector().getSize();
         break;
       }
     }
@@ -503,11 +545,12 @@ export class CubismModelSettingJson extends ICubismModelSetting {
 
     for (
       let i = 0;
-      i < this._jsonValue[FrequestNode.FrequestNode_Groups].getSize();
+      i < this._jsonValue.at(FrequestNode.FrequestNode_Groups).getSize();
       i++
     ) {
-      const refI: Value =
-        this._jsonValue[FrequestNode.FrequestNode_Groups].getValueByIndex(i);
+      const refI: Value = this._jsonValue
+        .at(FrequestNode.FrequestNode_Groups)
+        .getValueByIndex(i);
       if (refI.isNull() || refI.isError()) {
         continue;
       }
@@ -527,7 +570,7 @@ export class CubismModelSettingJson extends ICubismModelSetting {
    * @return false キーが存在しない
    */
   protected isExistModelFile(): boolean {
-    const node: Value = this._jsonValue[FrequestNode.FrequestNode_Moc];
+    const node: Value = this._jsonValue.at(FrequestNode.FrequestNode_Moc);
     return !node.isNull() && !node.isError();
   }
 
@@ -537,7 +580,7 @@ export class CubismModelSettingJson extends ICubismModelSetting {
    * @return false キーが存在しない
    */
   protected isExistTextureFiles(): boolean {
-    const node: Value = this._jsonValue[FrequestNode.FrequestNode_Textures];
+    const node: Value = this._jsonValue.at(FrequestNode.FrequestNode_Textures);
     return !node.isNull() && !node.isError();
   }
 
@@ -547,7 +590,7 @@ export class CubismModelSettingJson extends ICubismModelSetting {
    * @return false キーが存在しない
    */
   protected isExistHitAreas(): boolean {
-    const node: Value = this._jsonValue[FrequestNode.FrequestNode_HitAreas];
+    const node: Value = this._jsonValue.at(FrequestNode.FrequestNode_HitAreas);
     return !node.isNull() && !node.isError();
   }
 
@@ -557,7 +600,7 @@ export class CubismModelSettingJson extends ICubismModelSetting {
    * @return false キーが存在しない
    */
   protected isExistPhysicsFile(): boolean {
-    const node: Value = this._jsonValue[FrequestNode.FrequestNode_Physics];
+    const node: Value = this._jsonValue.at(FrequestNode.FrequestNode_Physics);
     return !node.isNull() && !node.isError();
   }
 
@@ -567,7 +610,7 @@ export class CubismModelSettingJson extends ICubismModelSetting {
    * @return false キーが存在しない
    */
   protected isExistPoseFile(): boolean {
-    const node: Value = this._jsonValue[FrequestNode.FrequestNode_Pose];
+    const node: Value = this._jsonValue.at(FrequestNode.FrequestNode_Pose);
     return !node.isNull() && !node.isError();
   }
 
@@ -577,7 +620,9 @@ export class CubismModelSettingJson extends ICubismModelSetting {
    * @return false キーが存在しない
    */
   protected isExistExpressionFile(): boolean {
-    const node: Value = this._jsonValue[FrequestNode.FrequestNode_Expressions];
+    const node: Value = this._jsonValue.at(
+      FrequestNode.FrequestNode_Expressions
+    );
     return !node.isNull() && !node.isError();
   }
 
@@ -587,7 +632,7 @@ export class CubismModelSettingJson extends ICubismModelSetting {
    * @return false キーが存在しない
    */
   protected isExistMotionGroups(): boolean {
-    const node: Value = this._jsonValue[FrequestNode.FrequestNode_Motions];
+    const node: Value = this._jsonValue.at(FrequestNode.FrequestNode_Motions);
     return !node.isNull() && !node.isError();
   }
 
@@ -598,10 +643,9 @@ export class CubismModelSettingJson extends ICubismModelSetting {
    * @return false キーが存在しない
    */
   protected isExistMotionGroupName(groupName: string): boolean {
-    const node: Value =
-      this._jsonValue[FrequestNode.FrequestNode_Motions].getValueByString(
-        groupName
-      );
+    const node: Value = this._jsonValue
+      .at(FrequestNode.FrequestNode_Motions)
+      .getValueByString(groupName);
     return !node.isNull() && !node.isError();
   }
 
@@ -613,7 +657,8 @@ export class CubismModelSettingJson extends ICubismModelSetting {
    * @return false キーが存在しない
    */
   protected isExistMotionSoundFile(groupName: string, index: number): boolean {
-    const node: Value = this._jsonValue[FrequestNode.FrequestNode_Motions]
+    const node: Value = this._jsonValue
+      .at(FrequestNode.FrequestNode_Motions)
       .getValueByString(groupName)
       .getValueByIndex(index)
       .getValueByString(this.soundPath);
@@ -628,7 +673,8 @@ export class CubismModelSettingJson extends ICubismModelSetting {
    * @return false キーが存在しない
    */
   protected isExistMotionFadeIn(groupName: string, index: number): boolean {
-    const node: Value = this._jsonValue[FrequestNode.FrequestNode_Motions]
+    const node: Value = this._jsonValue
+      .at(FrequestNode.FrequestNode_Motions)
       .getValueByString(groupName)
       .getValueByIndex(index)
       .getValueByString(this.fadeInTime);
@@ -643,7 +689,8 @@ export class CubismModelSettingJson extends ICubismModelSetting {
    * @return false キーが存在しない
    */
   protected isExistMotionFadeOut(groupName: string, index: number): boolean {
-    const node: Value = this._jsonValue[FrequestNode.FrequestNode_Motions]
+    const node: Value = this._jsonValue
+      .at(FrequestNode.FrequestNode_Motions)
       .getValueByString(groupName)
       .getValueByIndex(index)
       .getValueByString(this.fadeOutTime);
@@ -670,19 +717,20 @@ export class CubismModelSettingJson extends ICubismModelSetting {
    */
   protected isExistEyeBlinkParameters(): boolean {
     if (
-      this._jsonValue[FrequestNode.FrequestNode_Groups].isNull() ||
-      this._jsonValue[FrequestNode.FrequestNode_Groups].isError()
+      this._jsonValue.at(FrequestNode.FrequestNode_Groups).isNull() ||
+      this._jsonValue.at(FrequestNode.FrequestNode_Groups).isError()
     ) {
       return false;
     }
 
     for (
       let i = 0;
-      i < this._jsonValue[FrequestNode.FrequestNode_Groups].getSize();
+      i < this._jsonValue.at(FrequestNode.FrequestNode_Groups).getSize();
       ++i
     ) {
       if (
-        this._jsonValue[FrequestNode.FrequestNode_Groups]
+        this._jsonValue
+          .at(FrequestNode.FrequestNode_Groups)
           .getValueByIndex(i)
           .getValueByString(this.name)
           .getRawString() == this.eyeBlink
@@ -701,18 +749,19 @@ export class CubismModelSettingJson extends ICubismModelSetting {
    */
   protected isExistLipSyncParameters(): boolean {
     if (
-      this._jsonValue[FrequestNode.FrequestNode_Groups].isNull() ||
-      this._jsonValue[FrequestNode.FrequestNode_Groups].isError()
+      this._jsonValue.at(FrequestNode.FrequestNode_Groups).isNull() ||
+      this._jsonValue.at(FrequestNode.FrequestNode_Groups).isError()
     ) {
       return false;
     }
     for (
       let i = 0;
-      i < this._jsonValue[FrequestNode.FrequestNode_Groups].getSize();
+      i < this._jsonValue.at(FrequestNode.FrequestNode_Groups).getSize();
       ++i
     ) {
       if (
-        this._jsonValue[FrequestNode.FrequestNode_Groups]
+        this._jsonValue
+          .at(FrequestNode.FrequestNode_Groups)
           .getValueByIndex(i)
           .getValueByString(this.name)
           .getRawString() == this.lipSync
@@ -724,7 +773,7 @@ export class CubismModelSettingJson extends ICubismModelSetting {
   }
 
   protected _json: CubismJson;
-  protected _jsonValue: Array<Value>;
+  protected _jsonValue: csmVector<Value>;
 
   /**
    * Model3Jsonのキー文字列

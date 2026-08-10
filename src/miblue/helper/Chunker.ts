@@ -1,5 +1,5 @@
 export const Chunker = {
-    chunk(text: string, minWords: number = 25): string[] {
+    Chunk(text: string, minWords: number = 8): string[] {
         if (!text.trim()) return [];
 
         text = text.replace(/\s+/g, " ").trim();

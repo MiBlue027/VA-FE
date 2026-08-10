@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, onMounted, onBeforeUnmount, watch } from "vue";
 
 const PIXI = (window as any).PIXI;
 const Live2DModel = PIXI.live2d.Live2DModel;
@@ -7,17 +7,45 @@ const Live2DModel = PIXI.live2d.Live2DModel;
 const containerRef = ref<HTMLDivElement | null>(null);
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 
+/**
+ * All framing knobs live here so the parent can tune "how big, how
+ * cropped, where" from the outside without touching this file.
+ *
+ * - fitHeightRatio: at zoom = 1, the model's rendered height as a
+ *   fraction of the canvas height. 0.98 ~= almost fills the canvas.
+ * - zoom: multiplier on top of fitHeightRatio. >1 makes the model
+ *   bigger (crops more), <1 makes it smaller (shows more headroom).
+ * - anchorX: 0-1, horizontal position of the model's center line
+ *   within the canvas (0.5 = centered).
+ * - verticalAnchorOffset: 0-1, fraction of the model's rendered
+ *   height that gets pushed below the bottom edge of the canvas.
+ *   0 = feet exactly touch the bottom (full body, no crop).
+ *   e.g. 0.18 crops off roughly the shins/feet for a closer, "upper
+ *   body" framing. This crop happens at the PIXI/canvas level (real
+ *   clipping against the render target), never via a CSS transform,
+ *   so the model stays pixel-crisp at any zoom instead of looking
+ *   blurry/pixelated the way a CSS `scale()` on the canvas would.
+ */
 const props = withDefaults(
         defineProps<{
             modelUrl?: string;
+            zoom?: number;
+            fitHeightRatio?: number;
+            anchorX?: number;
+            verticalAnchorOffset?: number;
         }>(),
         {
             modelUrl: "/assets/Live2DAsset/Resources/Haru/Haru.model3.json",
+            zoom: 1,
+            fitHeightRatio: 0.98,
+            anchorX: 0.5,
+            verticalAnchorOffset: 0,
         }
 );
 
 let app: any = null;
 let model: any = null;
+let naturalHeight = 0; // model's rendered height at scale = 1, captured once on load
 
 let audioContext: AudioContext | null = null;
 let analyser: AnalyserNode | null = null;
@@ -28,8 +56,13 @@ let lipSyncRegistered = false;
 // simpan object URL aktif supaya bisa di-revoke
 let currentObjectUrl: string | null = null;
 
-async function initLive2D() {
+// --- resize / zoom plumbing -------------------------------------------------
+let resizeObserver: ResizeObserver | null = null;
+let dprMediaQuery: MediaQueryList | null = null;
+
+async function InitLive2D() {
     if (!canvasRef.value || !containerRef.value) return;
+
     app = new PIXI.Application({
         view: canvasRef.value,
         resizeTo: containerRef.value,
@@ -38,43 +71,113 @@ async function initLive2D() {
         resolution: window.devicePixelRatio || 1,
         antialias: true,
     });
+
     model = await Live2DModel.from(props.modelUrl, {
-        autoInteract: false
+        autoInteract: false,
     });
-    console.log(model.internalModel);
-    console.log(model);
+
+    // Capture the model's natural (unscaled) height once, before we
+    // ever touch model.scale. Every future fit is derived from this,
+    // so repeated resizes never compound rounding/scale error.
+    naturalHeight = model.height;
+
     app.stage.addChild(model);
+
+    HandleContainerResize();
+
+    resizeObserver = new ResizeObserver(() => HandleContainerResize());
+    resizeObserver.observe(containerRef.value);
+
+    // Fallback for environments without a well-behaved ResizeObserver.
+    window.addEventListener("resize", HandleContainerResize);
+
+    WatchDevicePixelRatio();
+}
+
+/**
+ * Resizes the renderer to match the container's *actual* current box
+ * (not just window size — this also fires when the container shrinks
+ * because a sidebar opened, etc.) and re-fits the model inside it.
+ */
+function HandleContainerResize() {
+    if (!app || !containerRef.value) return;
+
+    const { clientWidth, clientHeight } = containerRef.value;
+    if (!clientWidth || !clientHeight) return;
+
+    app.renderer.resize(clientWidth, clientHeight);
     fitModel();
-    window.addEventListener("resize", fitModel);
+}
+
+/**
+ * Browser/OS zoom changes devicePixelRatio without reliably firing a
+ * window "resize" event in every browser. Watching a matchMedia query
+ * tied to the current dpr is the standard way to catch that and keep
+ * the canvas rendering at native resolution (otherwise the model
+ * looks soft/pixelated after zooming).
+ */
+function WatchDevicePixelRatio() {
+    dprMediaQuery?.removeEventListener("change", OnDevicePixelRatioChange);
+    dprMediaQuery = matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+    dprMediaQuery.addEventListener("change", OnDevicePixelRatioChange, { once: true });
+}
+
+function OnDevicePixelRatioChange() {
+    if (app) {
+        app.renderer.resolution = window.devicePixelRatio || 1;
+        HandleContainerResize();
+    }
+    // matchMedia listeners are one-shot per query instance; re-arm for the next zoom step.
+    WatchDevicePixelRatio();
 }
 
 function fitModel() {
-    if (!app || !model) return;
+    if (!app || !model || !naturalHeight) return;
 
-    model.anchor.set(0.5, 1);
-    const targetHeight = app.screen.height * 0.95;
+    const screenW = app.screen.width;
+    const screenH = app.screen.height;
+    if (!screenW || !screenH) return;
 
-    const scale = targetHeight / model.height;
+    model.anchor.set(props.anchorX, 1);
 
+    const scale = (screenH * props.fitHeightRatio * props.zoom) / naturalHeight;
     model.scale.set(scale);
 
-    model.position.set(
-            app.screen.width / 2,
-            app.screen.height
-    );
+    const renderedHeight = naturalHeight * scale;
+    const verticalOffsetPx = renderedHeight * props.verticalAnchorOffset;
+
+    // anchor.y = 1 means position.y is where the model's *feet* sit.
+    // Pushing that point verticalOffsetPx below the canvas bottom (screenH)
+    // is what crops the lower body, cleanly clipped by the canvas edge.
+    model.position.set(screenW * props.anchorX, screenH + verticalOffsetPx);
 }
+
+// Re-fit whenever a framing prop changes, so the parent can live-tune
+// zoom/crop/position (e.g. from a settings panel or backend config).
+watch(
+        () => [props.zoom, props.fitHeightRatio, props.anchorX, props.verticalAnchorOffset],
+        () => fitModel()
+);
 
 onMounted(async () => {
     try {
-        await initLive2D();
+        await InitLive2D();
     } catch (err) {
         console.error("Live2D Error:", err);
     }
 });
 
 onBeforeUnmount(() => {
-    window.removeEventListener("resize", fitModel);
+    resizeObserver?.disconnect();
+    resizeObserver = null;
+
+    dprMediaQuery?.removeEventListener("change", OnDevicePixelRatioChange);
+    dprMediaQuery = null;
+
+    window.removeEventListener("resize", HandleContainerResize);
+
     revokeCurrentObjectUrl();
+
     if (model) {
         model.destroy({
             children: true,
@@ -98,7 +201,7 @@ function revokeCurrentObjectUrl() {
  * playVoice sekarang menerima Blob (hasil TTS langsung),
  * tapi tetap backward-compatible kalau ada yang kirim string URL.
  */
-async function playVoice(source: Blob | string): Promise<void> {
+async function PlayVoice(source: Blob | string): Promise<void> {
 
     if (!audioContext) {
         audioContext = new AudioContext();
@@ -135,7 +238,7 @@ async function playVoice(source: Blob | string): Promise<void> {
     analyser.connect(audioContext.destination);
 
     dataArray = new Uint8Array(
-            new ArrayBuffer(analyser.frequencyBinCount)
+        new ArrayBuffer(analyser.frequencyBinCount)
     );
 
     let currentMouthOpen = 0;
@@ -216,14 +319,6 @@ async function playVoice(source: Blob | string): Promise<void> {
 
     }
 
-    await audio.play();
-
-    audio.onended = () => {
-        model.internalModel.coreModel.setParameterValueById("ParamMouthOpenY", 0);
-        model.internalModel.coreModel.setParameterValueById("ParamMouthForm", SMILE_BASE);
-        revokeCurrentObjectUrl();
-    };
-
     return new Promise<void>((resolve, reject) => {
         if (!audio) {
             reject(new Error("Audio element not initialized"));
@@ -244,14 +339,11 @@ async function playVoice(source: Blob | string): Promise<void> {
 
         audio.play().catch(reject);
     });
-
 }
 
-
 defineExpose({
-    playVoice
+    playVoice: PlayVoice,
 });
-
 </script>
 
 <template>

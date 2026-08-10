@@ -5,100 +5,6 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
-## [5-r.5] - 2026-04-02
-
-### Added
-
-* Add functionality to change motion calculation order.
-* Add `cubismlook` class that implements the target tracking feature.
-  * The target tracking feature can now specify parameter IDs through the `Framework`.
-
-### Changed
-
-* Change multiply and screen color functions to separate class with renamed methods.
-
-### Fixed
-
-* Fix unnecessary multiply color and screen color settings in mask drawing.
-
-### Removed
-
-* Remove deprecated functions from CubismMotion:
-  * `setIsLoop()` (use `setLoop()` instead)
-  * `isLoop()` (use `getLoop()` instead)
-  * `setIsLoopFadeIn()` (use `setLoopFadeIn()` instead)
-  * `isLoopFadeIn()` (use `getLoopFadeIn()` instead)
-* Remove deprecated functions from CubismExpressionMotionManager:
-  * `getCurrentPriority()` (priority is not used in expression motion playback)
-  * `getReservePriority()` (priority is not used in expression motion playback)
-  * `setReservePriority()` (priority is not used in expression motion playback)
-  * `startMotionPriority()` (use `startMotion()` instead)
-* Remove deprecated fields from CubismExpressionMotionManager:
-  * `_currentPriority` (priority is not used in expression motion playback)
-  * `_reservePriority` (priority is not used in expression motion playback)
-* Remove deprecated function from CubismExpressionMotion:
-  * `getFadeWeight()` (use `CubismExpressionMotionManager.getFadeWeight()` instead)
-* Remove deprecated field from CubismExpressionMotion:
-  * `_fadeWeight` (can cause bugs)
-* Remove deprecated functions from CubismModel:
-  * `getOverwriteFlagForModelCullings()` (renamed to `getOverrideFlagForModelCullings()`)
-  * `setOverwriteFlagForModelCullings()` (renamed to `setOverrideFlagForModelCullings()`)
-  * `getOverwriteFlagForDrawableCullings()` (renamed to `getOverrideFlagForDrawableCullings()`)
-  * `setOverwriteFlagForDrawableCullings()` (renamed to `setOverrideFlagForDrawableCullings()`)
-
-
-## [5-r.5-beta.3.1] - 2026-02-19
-
-### Fixed
-
-* Fix a bug where rendering results were not as expected when using Blend mode on semi-transparent objects.
-* Fix a bug where the `stopAllMotions()` function in the `CubismMotionQueueManager` class did not work correctly.
-
-
-## [5-r.5-beta.3] - 2026-01-29
-
-### Changed
-
-* Replace standard `Array`, `Map`, and `String` with `csmVector`, `csmMap`, and `csmString`.
-* Change to allow shader files to be specified outside the `CubismFramework`.
-* Change the shader strings written in the `CubismShader_WebGL` class to use external files.
-
-### Fixed
-
-* Fix the operation of `CubismOffscreenRenderTargetManager` to be more efficient.
-* Fix the timing of beforeDrawModelRenderTarget call.
-
-
-## [5-r.5-beta.2] - 2025-10-14
-
-### Added
-
-* Add classes `CubismOffscreenRenderTarget_WebGL` and `CubismOffscreenManager` that reuse `WebGLFramebuffer` for Offscreen drawing.
-* Add `getMocVersionFromBuffer()`function.
-  * Support for retrieving MOC version from unsupported new MOC3 files.
-
-### Removed
-
-* Remove unnecessary classes and variables.
-
-
-## [5-r.5-beta.1] - 2025-08-26
-
-### Added
-
-* Add `cubismrendertarget_webgl.ts`.
-  * Define a class `CubismRenderTarget_WebGL` that manages the frame buffer and color buffer.
-* Add support for Blend mode and Offscreen drawing.
-
-### Changed
-
-* Change the rendering context requirement in WebGL environments to `WebGL2RenderingContext`.
-  * In particular, when using the blend modes added in Cubism 5.3 and later, `WebGL2RenderingContext.blitFramebuffer()` is used.
-* Change the clipping mask processing uses class `CubismRenderTarget_WebGL`.
-* Change the API called to retrieve the drawable render order from `getDrawableRenderOrders()` to `getRenderOrders()` in CubismCore.
-  * See `CHANGELOG.md` in Core.
-
-
 ## [5-r.4] - 2025-05-15
 
 ### Added
@@ -433,11 +339,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 * Reformat code using Prettier and ESLint.
 
 
-[5-r.5]: https://github.com/Live2D/CubismWebFramework/compare/5-r.5-beta.3.1...5-r.5
-[5-r.5-beta.3.1]: https://github.com/Live2D/CubismWebFramework/compare/5-r.5-beta.3...5-r.5-beta.3.1
-[5-r.5-beta.3]: https://github.com/Live2D/CubismWebFramework/compare/5-r.5-beta.2...5-r.5-beta.3
-[5-r.5-beta.2]: https://github.com/Live2D/CubismWebFramework/compare/5-r.5-beta.1...5-r.5-beta.2
-[5-r.5-beta.1]: https://github.com/Live2D/CubismWebFramework/compare/5-r.4...5-r.5-beta.1
 [5-r.4]: https://github.com/Live2D/CubismWebFramework/compare/5-r.3...5-r.4
 [5-r.3]: https://github.com/Live2D/CubismWebFramework/compare/5-r.2...5-r.3
 [5-r.2]: https://github.com/Live2D/CubismWebFramework/compare/5-r.1...5-r.2

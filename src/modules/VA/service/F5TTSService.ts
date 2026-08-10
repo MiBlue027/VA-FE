@@ -12,6 +12,9 @@ export interface F5TTSService_Config {
     live2dRef: Ref<any>
 }
 
+export type ChunkTTSCallback = (chunkText: string, index: number, isLast: boolean) => void;
+export type StreamTTSCallback = () => void;
+
 export class F5TTSService {
     private config: F5TTSService_Config
     private TTSReference = {
@@ -36,16 +39,29 @@ export class F5TTSService {
         );
     }
 
-    public async ChunkTTS(text: string) {
-        const chunks = Chunker.chunk(text);
+    public async ChunkTTS(text: string, onChunkReady?: ChunkTTSCallback) {
+        const chunks = Chunker.Chunk(text);
 
-        const audioQueue: Blob[] = [];
+        interface QueueItem {
+            audio: Blob
+            text: string
+            index: number
+            isLast: boolean
+        }
+
+        const audioQueue: QueueItem[] = [];
         let producerFinished = false;
 
         const producer = async () => {
-            for (const chunk of chunks) {
+            for (let i = 0; i < chunks.length; i++) {
+                const chunk = chunks[i];
                 const audio = await this.GetTTS(chunk);
-                audioQueue.push(audio);
+                audioQueue.push({
+                    audio
+                    , text: chunk
+                    , index: i
+                    , isLast: i === chunks.length - 1
+                });
             }
             producerFinished = true;
         };
@@ -62,9 +78,10 @@ export class F5TTSService {
                     continue;
                 }
 
-                const audio = audioQueue.shift();
-                if (audio) {
-                    await this.config.live2dRef.value.playVoice(audio);
+                const item = audioQueue.shift();
+                if (item) {
+                    onChunkReady?.(item.text, item.index, item.isLast);
+                    await this.config.live2dRef.value.playVoice(item.audio);
                 }
             }
         };
@@ -75,7 +92,7 @@ export class F5TTSService {
         ]);
     }
 
-    public async StreamTTS(text: string): Promise<void> {
+    public async StreamTTS(text: string, onFirstChunk?: StreamTTSCallback): Promise<void> {
         return new Promise((resolve, reject) => {
 
             const ttsWsUrl = this.config.wsBaseUrl + this.config.streamResEndpoint
@@ -84,6 +101,7 @@ export class F5TTSService {
             const audioQueue: Blob[] = [];
             let isPlaying = false;
             let isFinished = false;
+            let firstChunkFired = false;
 
             const PlayNext = async () => {
                 if (isPlaying) {
@@ -129,6 +147,11 @@ export class F5TTSService {
                                 type: "audio/wav"
                             }
                     );
+
+                    if (!firstChunkFired) {
+                        firstChunkFired = true;
+                        onFirstChunk?.();
+                    }
 
                     audioQueue.push(audio);
 
