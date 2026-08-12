@@ -3,6 +3,8 @@ import { ref, computed, nextTick, onBeforeUnmount } from "vue";
 import Live2D from "../components/Live2D.vue";
 import { AgenticService } from "../service/AgenticService.ts";
 import { F5TTSService } from "../service/F5TTSService.ts";
+import Live2DBackground from "../components/Live2DBackground.vue";
+import ChatBox from "../components/ChatBox.vue";
 
 const live2dRef = ref();
 const inputQuestion = ref("");
@@ -343,25 +345,7 @@ defineExpose({
         <!-- ==================== MAIN AVATAR AREA ==================== -->
         <main class="avatar-area">
 
-            <!-- Background — swappable image layers, crossfaded, with a
-                 gradient scrim so foreground content stays legible no
-                 matter what image the backend hands it. Falls back to a
-                 plain gradient when no image is set. -->
-            <div class="bg-base"></div>
-            <div
-                    class="bg-image-layer"
-                    :class="{ visible: activeBackgroundLayer === 0 && backgroundLayers[0] }"
-                    :style="backgroundLayers[0] ? { backgroundImage: `url(${backgroundLayers[0]})` } : {}"
-            ></div>
-            <div
-                    class="bg-image-layer"
-                    :class="{ visible: activeBackgroundLayer === 1 && backgroundLayers[1] }"
-                    :style="backgroundLayers[1] ? { backgroundImage: `url(${backgroundLayers[1]})` } : {}"
-            ></div>
-            <div class="bg-scrim"></div>
-            <div class="background-glow glow-one"></div>
-            <div class="background-glow glow-two"></div>
-            <div class="background-grid"></div>
+            <Live2DBackground :layers="[null, null]" :active-layer="0"/>
 
             <!-- Header -->
             <header class="va-header">
@@ -483,45 +467,7 @@ defineExpose({
 
 
                     <!-- Chat Messages -->
-                    <div ref="chatMessagesRef" class="chat-messages">
-
-                        <!-- Empty state -->
-                        <div v-if="messages.length === 0" class="chat-empty">
-                            <div class="empty-icon">✦</div>
-                            <h3>How can I help?</h3>
-                            <p>Ask me anything using text or your voice.</p>
-                        </div>
-
-
-                        <!-- Messages -->
-                        <div
-                                v-for="(message, index) in messages"
-                                :key="index"
-                                class="message"
-                                :class="message.role"
-                        >
-                            <div class="message-avatar">
-                                {{ message.role === "user" ? "You" : "AI" }}
-                            </div>
-
-                            <div class="message-content">
-                                {{ message.content }}
-                            </div>
-                        </div>
-
-
-                        <!-- Loading -->
-                        <div v-if="isLoading" class="message assistant">
-                            <div class="message-avatar">AI</div>
-
-                            <div class="typing-indicator">
-                                <span></span>
-                                <span></span>
-                                <span></span>
-                            </div>
-                        </div>
-
-                    </div>
+                    <ChatBox :messages="messages" :is-loading="isLoading"/>
 
 
                     <!-- Chat Input -->
