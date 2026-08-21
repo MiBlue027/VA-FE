@@ -1,8 +1,7 @@
-import { ref, computed, onBeforeUnmount } from "vue";
-import type { Ref } from "vue";
-import type {VoiceStateType} from "../Constant/VoiceConstant.ts";
+import { ref, computed, onBeforeUnmount, type Ref } from "vue";
+import {VoiceState, type VoiceStateType} from "../Constant/VoiceConstant.ts";
+import {STTLang} from "../Constant/STTLangConstant.ts";
 
-// Minimal typings
 type SpeechRecognitionInstance = {
     lang: string;
     continuous: boolean;
@@ -17,17 +16,19 @@ type SpeechRecognitionInstance = {
     onend: (() => void) | null;
 };
 
+interface UseVoiceInputOptions {
+    inputQuestion: Ref<string>;
+    onFinalTranscript?: () => void;
+    lang?: string;
+    errorClearDelayMs?: number;
+}
 
-/**
- * Wraps the Web Speech API. `inputQuestion` is the same ref the textarea is
- * bound to, so interim/final transcripts flow straight into it. `onAutoSubmit`
- * is called once recognition ends if there's text sitting in the box, mirroring
- * the original "stop talking -> auto submit" behaviour.
- */
-export function UseVoiceInput(inputQuestion: Ref<string>, onAutoSubmit: () => void) {
-    const voiceState = ref<VoiceStateType>("idle");
+export function UseVoiceInput(options: UseVoiceInputOptions) {
+    const { inputQuestion, onFinalTranscript, lang = STTLang.IND, errorClearDelayMs = 3500 } = options;
+
+    const voiceState = ref<VoiceStateType>(VoiceState.IDLE);
     const voiceErrorMessage = ref("");
-    const isRecording = computed(() => voiceState.value === "listening");
+    const isRecording = computed(() => voiceState.value === VoiceState.LISTENING);
 
     let recognition: SpeechRecognitionInstance | null = null;
     let voiceErrorTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -37,21 +38,18 @@ export function UseVoiceInput(inputQuestion: Ref<string>, onAutoSubmit: () => vo
                 (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
         if (!SpeechRecognitionCtor) {
-            SetVoiceError("Browser ini tidak mendukung voice input (Speech Recognition).");
+            SetVoiceError("This browser is not support Speech Recognition.");
             return null;
         }
 
         const recog: SpeechRecognitionInstance = new SpeechRecognitionCtor();
-        recog.lang = "id-ID";
+        recog.lang = lang;
         recog.continuous = false;
         recog.interimResults = true;
         recog.maxAlternatives = 1;
 
-        // Only flip the UI to "listening" once the engine actually confirms it
-        // started (mic permission granted, capture running). See original
-        // component for the reasoning behind avoiding an optimistic state flip.
         recog.onstart = () => {
-            voiceState.value = "listening";
+            voiceState.value = VoiceState.LISTENING;
             voiceErrorMessage.value = "";
         };
 
@@ -61,11 +59,8 @@ export function UseVoiceInput(inputQuestion: Ref<string>, onAutoSubmit: () => vo
 
             for (let i = event.resultIndex; i < event.results.length; i++) {
                 const transcript = event.results[i][0].transcript;
-                if (event.results[i].isFinal) {
-                    final += transcript;
-                } else {
-                    interim += transcript;
-                }
+                if (event.results[i].isFinal) final += transcript;
+                else interim += transcript;
             }
 
             inputQuestion.value = final || interim;
@@ -74,49 +69,41 @@ export function UseVoiceInput(inputQuestion: Ref<string>, onAutoSubmit: () => vo
         recog.onerror = (event) => {
             console.error("Speech recognition error:", event.error);
 
-            const messages: Record<string, string> = {
-                "not-allowed": "Izin mikrofon ditolak. Aktifkan akses mikrofon di browser.",
-                "no-speech": "Tidak ada suara terdeteksi. Coba lagi.",
-                "audio-capture": "Mikrofon tidak ditemukan.",
-                network: "Koneksi bermasalah saat memproses suara.",
+            const errorMessages: Record<string, string> = {
+                "not-allowed": "Microphone permission denied. Enable microphone access in your browser.",
+                "no-speech": "No speech detected. Please try again.",
+                "audio-capture": "No microphone found.",
+                network: "Network connection issue while processing audio.",
+                default: "An error occurred with the voice input.",
             };
 
-            SetVoiceError(messages[event.error] ?? "Terjadi kesalahan pada voice input.");
+            SetVoiceError(errorMessages[event.error] ?? "An error occurred with the voice input");
         };
 
         recog.onend = () => {
-            // A fresh recognition instance is created on every toggle (see
-            // ToggleVoiceInput), so once this one ends it's discarded rather
-            // than reused — reusing a single SpeechRecognition instance across
-            // multiple start() calls is what silently stopped STT from working
-            // in some browsers after the first attempt.
             recognition = null;
 
-            if (voiceState.value === "listening") {
-                voiceState.value = "idle";
-            }
+            if (voiceState.value === VoiceState.LISTENING) voiceState.value = VoiceState.IDLE;
 
-            if (inputQuestion.value.trim()) {
-                onAutoSubmit();
-            }
+            if (inputQuestion.value.trim()) onFinalTranscript?.();
         };
 
         return recog;
     }
 
     function SetVoiceError(message: string) {
-        voiceState.value = "error";
+        voiceState.value = VoiceState.ERROR;
         voiceErrorMessage.value = message;
 
         if (voiceErrorTimeout) clearTimeout(voiceErrorTimeout);
         voiceErrorTimeout = setTimeout(() => {
-            if (voiceState.value === "error") voiceState.value = "idle";
+            if (voiceState.value === VoiceState.ERROR) voiceState.value = VoiceState.IDLE;
             voiceErrorMessage.value = "";
-        }, 3500);
+        }, errorClearDelayMs);
     }
 
     function ToggleVoiceInput() {
-        if (voiceState.value === "listening") {
+        if (voiceState.value === VoiceState.LISTENING) {
             recognition?.stop();
             return;
         }
@@ -140,10 +127,5 @@ export function UseVoiceInput(inputQuestion: Ref<string>, onAutoSubmit: () => vo
         if (voiceErrorTimeout) clearTimeout(voiceErrorTimeout);
     });
 
-    return {
-        voiceState,
-        voiceErrorMessage,
-        isRecording,
-        ToggleVoiceInput,
-    };
+    return { voiceState, voiceErrorMessage, isRecording, ToggleVoiceInput };
 }

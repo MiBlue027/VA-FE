@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from "vue";
-import type {ChatMessage} from "../Constant/ChatMessage.ts";
+import type {IChatMessage} from "../Constant/ChatMessage.ts";
 
 const props = defineProps<{
-    messages: ChatMessage[];
+    messages: IChatMessage[];
     isLoading: boolean;
 }>();
 

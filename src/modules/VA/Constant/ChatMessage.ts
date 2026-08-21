@@ -3,9 +3,9 @@ export const CHAT_MESSAGE_ROLE = {
     ASSISTANT: "assistant",
 } as const;
 
-export type ChatMessageRole = typeof CHAT_MESSAGE_ROLE[keyof typeof CHAT_MESSAGE_ROLE];
+export type ChatMessageRoleType = typeof CHAT_MESSAGE_ROLE[keyof typeof CHAT_MESSAGE_ROLE];
 
-export interface ChatMessage {
-    role: ChatMessageRole;
+export interface IChatMessage {
+    role: ChatMessageRoleType;
     content: string;
 }

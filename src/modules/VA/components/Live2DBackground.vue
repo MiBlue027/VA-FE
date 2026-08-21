@@ -1,9 +1,25 @@
 <script setup lang="ts">
 
+import {ref} from "vue";
+
 defineProps<{
     layers: [string | null, string | null];
     activeLayer: 0 | 1;
 }>();
+
+const backgroundLayers = ref<[string | null, string | null]>([null, null]);
+const activeBackgroundLayer = ref<0 | 1>(0);
+
+function SetBackgroundImage(url: string | null) {
+    const nextLayer = activeBackgroundLayer.value === 0 ? 1 : 0;
+    backgroundLayers.value[nextLayer] = url;
+    activeBackgroundLayer.value = nextLayer;
+}
+
+defineExpose({
+    SetBackgroundImage,
+});
+
 </script>
 
 <template>
