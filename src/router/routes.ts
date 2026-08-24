@@ -5,6 +5,12 @@ import DocUploadForm from "../modules/VA/Form/DocUploadForm.vue";
 
 const routes: RouteRecordRaw[] = [
     {
+        path: "/"
+        , redirect: {
+            name: RouterName.VIRTUAL_ASSISTANT
+        }
+    },
+    {
         path: "/virtual-assistant"
         , name: RouterName.VIRTUAL_ASSISTANT
         , component: VAForm
